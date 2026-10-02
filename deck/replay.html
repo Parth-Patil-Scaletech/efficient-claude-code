@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Run A vs Run B: replay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1F4; --panel:#FFFFFF; --ink:#16202A; --muted:#5A6774; --line:#D5DBE1;
+  --a:#B3303E; --a-soft:#F6E3E5; --b:#1F7366; --b-soft:#DDEFEB; --rule:#3150C4; --rule-soft:#E3E8FA;
+  --font:"Schibsted Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --bg:#131A21; --panel:#1B242D; --ink:#E7ECF1; --muted:#9AA7B4; --line:#2E3A46;
+  --a:#E3646F; --a-soft:#3A2226; --b:#4FB8A6; --b-soft:#17332F; --rule:#8EA2F0; --rule-soft:#232C4A; }}
+:root[data-theme="dark"]{
+  --bg:#131A21; --panel:#1B242D; --ink:#E7ECF1; --muted:#9AA7B4; --line:#2E3A46;
+  --a:#E3646F; --a-soft:#3A2226; --b:#4FB8A6; --b-soft:#17332F; --rule:#8EA2F0; --rule-soft:#232C4A; }
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 48px}
+h1{font-size:clamp(28px,4vw,44px);line-height:1.05;margin:0 0 6px;font-weight:800;letter-spacing:-.02em}
+.sub{color:var(--muted);margin:0 0 24px;max-width:70ch}
+.num{font-variant-numeric:tabular-nums}
+
+.meters{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.meter{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;border-top:6px solid var(--c)}
+.meter.a{--c:var(--a)} .meter.b{--c:var(--b)}
+.meter h2{margin:0;font-size:17px;font-weight:600}
+.meter h2 span{color:var(--muted);font-weight:400}
+.fare{font-size:clamp(40px,7vw,76px);font-weight:800;line-height:1;margin:10px 0 4px;color:var(--c);letter-spacing:-.03em}
+.fare-note{color:var(--muted);font-size:14px}
+.gauge{margin-top:14px}
+.gauge-top{display:flex;justify-content:space-between;font-size:14px;color:var(--muted)}
+.bar{height:10px;background:var(--bg);border-radius:6px;overflow:hidden;margin-top:4px}
+.bar i{display:block;height:100%;background:var(--c);width:0;transition:width .35s ease}
+
+.chart{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px 6px;margin-bottom:16px}
+.chart svg{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-family:var(--font);font-size:12px}
+
+.controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:16px;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding:8px 0}
+button{font:inherit;font-weight:600;font-size:15px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:10px;padding:8px 14px;cursor:pointer}
+button:hover{border-color:var(--muted)}
+button:focus-visible{outline:3px solid var(--rule);outline-offset:2px}
+button.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button:disabled{opacity:.4;cursor:default}
+.step{margin-left:auto;color:var(--muted);font-size:15px}
+.dots{display:flex;gap:4px}
+.dots button{width:28px;height:28px;padding:0;border-radius:8px;font-size:13px}
+.dots button[aria-current="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+.lanes{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.lane{display:flex;flex-direction:column;gap:10px}
+.lane h3{margin:0 0 2px;font-size:15px;color:var(--muted);font-weight:500}
+.card{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--c);border-radius:12px;padding:14px 16px}
+.lane.a .card{--c:var(--a)} .lane.b .card{--c:var(--b)}
+.card.past{opacity:.55}
+.card.past .reply,.card.past .note{display:none}
+.card-head{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;margin-bottom:6px}
+.card-head strong{font-size:15px}
+.chip{font-size:13px;border-radius:6px;padding:1px 8px;background:var(--bg);color:var(--muted)}
+.chip.fresh{background:var(--c);color:var(--panel)}
+.prompt{margin:0 0 8px;font-size:15px}
+.prompt.auto{font-style:italic;color:var(--muted)}
+.reply{margin:0 0 8px;font-size:14px;color:var(--muted)}
+.stats{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:14px;color:var(--muted)}
+.stats b{color:var(--ink);font-weight:600}
+.note{margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--rule-soft);font-size:14px}
+.rules{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.rules span{font-size:12.5px;font-weight:600;color:var(--rule);border:1px solid var(--rule);border-radius:999px;padding:0 8px}
+.done{border:1px dashed var(--b);border-radius:12px;padding:14px 16px;color:var(--b);font-weight:600;background:var(--b-soft)}
+
+.summary{display:none;margin-top:20px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;overflow-x:auto}
+.summary.show{display:block}
+.summary h2{margin:0 0 12px;font-size:22px}
+table{border-collapse:collapse;width:100%;min-width:520px;font-size:15px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--muted)}
+td.a{color:var(--a);font-weight:600} td.b{color:var(--b);font-weight:600}
+.headline{font-size:clamp(22px,3vw,30px);font-weight:800;margin:16px 0 4px}
+.foot{color:var(--muted);font-size:13px;margin-top:14px;max-width:80ch}
+
+@media (max-width:760px){
+  .lanes{grid-template-columns:1fr}
+  .meter{padding:14px}
+  .step{margin-left:0;width:100%}
+}
+@media (prefers-reduced-motion:reduce){ .bar i{transition:none} }
+
+/* compact layout when embedded in the deck: one card per run, no page scroll */
+.embed,.embed body{scrollbar-width:none}
+.embed ::-webkit-scrollbar{display:none}
+.embed .wrap{padding:12px 16px}
+.embed h1,.embed .sub{display:none}
+.embed .meters{margin-bottom:10px}
+.embed .meter{padding:10px 16px}
+.embed .fare{font-size:clamp(32px,5vw,56px);margin:4px 0 2px}
+.embed .gauge{margin-top:6px}
+.embed .chart{padding:8px 12px 2px;margin-bottom:8px}
+.embed .chart svg{max-height:22vh}
+.embed .controls{margin-bottom:8px;padding:4px 0}
+.embed .prompt,.embed .reply{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+.embed .reply{-webkit-line-clamp:2}
+.embed .card.past,.embed .lane h3{display:none}
+.embed .summary{margin-top:0;padding:12px 16px}
+.embed .summary h2{font-size:18px;margin-bottom:6px}
+.embed table{font-size:14px}
+.embed th,.embed td{padding:5px 8px}
+.embed .headline{margin:8px 0 2px;font-size:22px}
+.embed .foot{margin-top:6px}
+@media (max-height:760px){.embed .chart{display:none}.embed .fare{font-size:40px}}
+.embed.at-summary .lanes,.embed.at-summary .chart{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Same ticket, two habits</h1>
+  <p class="sub">TD-142 recorded twice from the same commit, ending in the same feature set and an open PR. Step through each prompt and watch the meter run.</p>
+
+  <div class="meters">
+    <section class="meter a" aria-live="polite">
+      <h2>Run A <span>how we usually work</span></h2>
+      <div class="fare num" id="fareA">$0.00</div>
+      <div class="fare-note" id="noteA">Not started</div>
+      <div class="gauge"><div class="gauge-top"><span>Context per call</span><span class="num" id="ctxA">0k</span></div><div class="bar"><i id="barA"></i></div></div>
+    </section>
+    <section class="meter b" aria-live="polite">
+      <h2>Run B <span>Golden Rules</span></h2>
+      <div class="fare num" id="fareB">$0.00</div>
+      <div class="fare-note" id="noteB">Not started</div>
+      <div class="gauge"><div class="gauge-top"><span>Context per call</span><span class="num" id="ctxB">0k</span></div><div class="bar"><i id="barB"></i></div></div>
+    </section>
+  </div>
+
+  <div class="chart"><svg id="chart" viewBox="0 0 1000 220" role="img" aria-label="Cumulative cost per prompt for both runs"></svg></div>
+
+  <div class="controls">
+    <button id="restart">Restart</button>
+    <button id="prev">Previous</button>
+    <button id="next" class="primary">Next prompt</button>
+    <button id="play">Play</button>
+    <div class="dots" id="dots"></div>
+    <span class="step" id="stepLabel"></span>
+  </div>
+
+  <div class="lanes">
+    <div class="lane a" id="laneA"><h3>Run A prompts</h3></div>
+    <div class="lane b" id="laneB"><h3>Run B prompts</h3></div>
+  </div>
+
+  <section class="summary" id="summary"></section>
+</div>
+
+<script>
+if(window.self!==window.top) document.documentElement.classList.add('embed');
+const DATA = {"runs": {"A": [{"prompt": "# TD-142: AI summary and suggested priority on tickets Support leads spend too long reading full tickets to decide what to pick up first. When a ticket is created, generate a short summary (1–2 sentences) and a suggested priority (low / medium / high /…", "auto": false, "reply": "TD-142 is implemented. When a ticket is created, the app now generates a 1–2 sentence summary and a suggested priority (low / medium / high / urgent). Both appear in a new \"AI summary\" panel on the ticket detail page, with a Regenerate…", "model": "Opus", "calls": 18, "cost": 0.7017, "cum": 0.7017, "ctx": 62930, "fresh": false, "tools": 17, "rules": [2, 3, 10], "note": "No spec, no plan mode, Opus for everything. Claude chose the scope itself (priority only on the detail page, not editable), installed a package without asking and edited docs nobody asked for."}, {"prompt": "Hmm, okay. So, about my decisions. It should be obvious to be able to see the priority in the listing page. You should be smart enough to realize this. No one is going to find the priority by clicking the details for each ticket. Its as bad as not having the…", "auto": false, "reply": "You're right on both points. Leads triage from the list, so a priority that only shows on the detail page doesn't help them, and an AI suggestion nobody can correct isn't useful. I should have built both the first time instead of listing…", "model": "Opus", "calls": 7, "cost": 0.3793, "cum": 1.081, "ctx": 79166, "fresh": false, "tools": 8, "rules": [7], "note": "Two scope gaps a spec line would have covered, delivered as frustration. Every correction re-sends the whole conversation."}, {"prompt": "1. You should keep the repo untouched. Ask for my permission before installing or uninstalling anything. For now, remove the temporary changes introduced by you 2. As said, your changes should be discarded. 3. Sort the lockfile and remove the changes Abuout…", "auto": false, "reply": "I've cleaned up my temporary changes, and the ticket list now has a sort option that it remembers between visits. Cleanup - vite removed: I deleted the 7 packages my temporary install added to node_modules (vite and its dependencies).…", "model": "Opus", "calls": 7, "cost": 0.3784, "cum": 1.4595, "ctx": 92696, "fresh": false, "tools": 6, "rules": [1], "note": "Environment cleanup plus a new requirement (sort options, remembered choice), still in the same growing session."}, {"prompt": "I'll go test the feature first...", "auto": false, "reply": "Sounds good. Your dev DB already has the new fields, so npm run dev is all you need, then open http://localhost:3000. Things to try: - List page: each ticket shows a priority badge. AI suggestions are marked \"· AI\" with a dashed border.…", "model": "Opus", "calls": 1, "cost": 0.0341, "cum": 1.4935, "ctx": 93428, "fresh": false, "tools": 0, "rules": [1], "note": "“I'll go test” still re-reads 93k tokens of context."}, {"prompt": "Alright, looks good. Though, we need to include a map/legent for all the available priority values and also the categories. We should be also be able to filter out the listing based on their selection", "auto": false, "reply": "The list page now has a legend that you can click to filter, listing every priority and every category. What's on the page: a bar above the list with two rows of chips: - Priority: Urgent, High, Medium, Low, No priority. - Category:…", "model": "Opus", "calls": 4, "cost": 0.2758, "cum": 1.7693, "ctx": 104415, "fresh": false, "tools": 3, "rules": [2], "note": "Third requirement added mid-run: legend and filters."}, {"prompt": "Perfect! Good job! Now, finally we got to have our tests written, tested and also the production build checked for errors before we are ready to go. Now, you can introduce the testing package in our packages as a dependency. No issue.", "auto": false, "reply": "Everything checks out and the branch is ready. - Tests: all 33 pass across 7 files. That covers ticket creation, AI summary and priority (including when the AI call fails), regenerating, lead priority overrides, the offline fallback, input…", "model": "Opus", "calls": 5, "cost": 0.2468, "cum": 2.0161, "ctx": 112146, "fresh": false, "tools": 4, "rules": [], "note": "Tests and the production build only checked at the very end."}, {"prompt": "okay, clean the stray file, we can't upgrade major versions right now as it will increase the task. And yes, commit the changes", "auto": false, "reply": "I committed everything to run-a/ai-triage as d7d71d6, and the working tree is clean. - Commit: \"AI triage: summary and suggested priority with lead override, list sort and filters (TD-142)\", covering 32 files. It's authored as the…", "model": "Opus", "calls": 10, "cost": 0.4307, "cum": 2.4468, "ctx": 121134, "fresh": false, "tools": 9, "rules": [4], "note": "Detour outside the repo to delete a stray lockfile in the home folder. Not asked for, not allowed."}, {"prompt": "yes, lets push and open a pr", "auto": false, "reply": "I pushed run-a/ai-triage and opened the pull request against main: PR #1 The description covers what the feature does, the two database changes (reviewers need to run npm run db:migrate), why vite was added, and how it was tested. It also…", "model": "Opus", "calls": 3, "cost": 0.1609, "cum": 2.6077, "ctx": 126594, "fresh": false, "tools": 2, "rules": [3], "note": "Commit and PR on Opus with 127k of context."}, {"prompt": "alright! thanks a lot! great work there.", "auto": false, "reply": "You're welcome, and thanks for steering it. The list visibility and lead override made the feature much more useful. PR #1 is ready for review whenever your team gets to it.", "model": "Opus", "calls": 1, "cost": 0.0578, "cum": 2.6656, "ctx": 130211, "fresh": false, "tools": 0, "rules": [1], "note": "A “thanks” on a 130k context costs more than any single tweak in Run B."}], "B": [{"prompt": "Read @docs/specs/ticket-ai-triage.md and plan the implementation. Existing patterns to follow: @lib/tickets/categorize.ts @lib/tickets/service.ts @lib/db/schema.ts. Work only inside this repo. List files and steps only, no code. Split into Part 1 (DB, AI,…", "auto": false, "reply": "Let me read the remaining relevant files in one pass.", "model": "Opus", "calls": 4, "cost": 0.2816, "cum": 0.2816, "ctx": 54602, "fresh": true, "tools": 5, "rules": [2, 3, 4], "note": "Spec plus plan mode on Opus. Files named, scope fixed before any code."}, {"prompt": "Plan approved: context cleared, switched to Sonnet (automatic)", "auto": true, "reply": "TD-142 is implemented, committed and pushed on run-b/ai-triage, and PR #2 to main is open: PR #2 npm test (30 tests), npm run typecheck and npm run build all pass. I only smoke-tested offline against the API, using a throwaway dev server:…", "model": "Sonnet", "calls": 14, "cost": 0.5258, "cum": 0.8075, "ctx": 74174, "fresh": true, "tools": 14, "rules": [1, 3], "note": "Plan approved, context cleared, Sonnet takes over automatically. Whole spec implemented, tests green, PR opened in one turn."}, {"prompt": "minor changes are needed, starting with moving the sort dropdown to be shifted under the Legend/filter. also include them in a block that appears separate from the rest of the background. just like how ticket cards in the listing are", "auto": false, "reply": "The legend and sort now sit together in one white bordered panel, styled like the ticket cards. The filter chips are on top and the sort dropdown is below them, with \"Showing X of Y\" and \"Clear filters\" on the same row as the sort. A thin…", "model": "Sonnet", "calls": 4, "cost": 0.0972, "cum": 0.9047, "ctx": 80367, "fresh": false, "tools": 3, "rules": [4], "note": "A styling preference that wasn't in the spec. What you leave out of the spec is what you correct later."}, {"prompt": "invert the order of priority filters too, to descending order left to right", "auto": false, "reply": "The priority chips now read Urgent, High, Medium, Low left to right, with \"No priority\" still last. Typecheck passes. The change is in components/FilterLegend.tsx, and I haven't looked at it in a browser. I haven't committed the earlier…", "model": "Sonnet", "calls": 2, "cost": 0.0532, "cum": 0.9579, "ctx": 84492, "fresh": false, "tools": 2, "rules": [7], "note": "Small, exact asks: two API calls each."}, {"prompt": "finally, make the same visibility updates for the AIsummary and actions section as well in the details screen and show that in a block", "auto": false, "reply": "The AI summary section on the detail page is now a white bordered block like the ticket cards. It holds the heading and summary text, then a divider, then the Regenerate button and priority select. I haven't looked at it in a browser, and…", "model": "Sonnet", "calls": 2, "cost": 0.0553, "cum": 1.0132, "ctx": 88547, "fresh": false, "tools": 1, "rules": [7], "note": "Same pattern for the detail page."}, {"prompt": "Run npm test, npm run typecheck and npm run build, report only failures. Then commit with a conventional commit message, push the branch, and open a PR with gh. Use the spec for the PR description. Keep it short.", "auto": false, "reply": "Done. All tests pass (30 passed). Committed styling updates (controls panel with filter legend + sort, detail page AI summary block, priority chips in descending order) and pushed to run-b/ai-triage. PR #2 is updated with the new commits:…", "model": "Haiku", "calls": 4, "cost": 0.1361, "cum": 1.1493, "ctx": 73148, "fresh": false, "tools": 3, "rules": [3, 1], "note": "Switching to Haiku mid-session re-caches the whole 73k context on the new model. It saved almost nothing. Switch models at a /clear boundary."}]}, "rules": {"1": "One task, one session", "2": "Plan before you build", "3": "Pick the right model", "4": "Point, don't make it search", "5": "Keep CLAUDE.md short", "6": "Two strikes", "7": "Facts, not feelings", "8": "Trim what you paste", "9": "Hand off, don't drag on", "10": "No unrequested docs"}, "summary": {"A": {"time": "46 min", "sessions": 1, "prompts": 9, "corrections": "4 rounds", "files": "32 files, +1,012 / −62", "peak": "130k", "cost": 2.6656, "costReported": "$2.92"}, "B": {"time": "27 min", "sessions": 2, "prompts": 6, "corrections": "0 (3 styling tweaks)", "files": "27 files, +797 / −60", "peak": "89k", "cost": 1.1493, "costReported": "$0.91 + planning"}}};
+const A = DATA.runs.A, B = DATA.runs.B, R = DATA.rules, S = DATA.summary;
+const MAX = Math.max(A.length, B.length);       // steps 0..MAX-1 show prompts, MAX shows the summary
+const CTX_SCALE = 150000;
+let step = -1, timer = null;
+
+const $ = id => document.getElementById(id);
+const money = v => '$' + v.toFixed(2);
+const k = v => Math.round(v/1000) + 'k';
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function card(t, i, current){
+  const rules = t.rules.length ? `<div class="rules">${t.rules.map(n=>`<span>Rule ${n}: ${esc(R[n])}</span>`).join('')}</div>` : '';
+  return `<article class="card ${current?'':'past'}">
+    <div class="card-head"><strong>Prompt ${i+1}</strong><span class="chip">${t.model}</span>${t.fresh?'<span class="chip fresh">Fresh session</span>':''}</div>
+    <p class="prompt ${t.auto?'auto':''}">${esc(t.prompt)}</p>
+    ${t.reply?`<p class="reply">Claude: ${esc(t.reply)}</p>`:''}
+    <div class="stats num"><span>Cost <b>+${money(t.cost)}</b></span><span>API calls <b>${t.calls}</b></span><span>Tool uses <b>${t.tools}</b></span><span>Context <b>${k(t.ctx)}</b></span></div>
+    ${t.note?`<div class="note">${rules}${esc(t.note)}</div>`:''}
+  </article>`;
+}
+
+function renderLane(el, run, title, label){
+  const shown = Math.min(step, run.length-1);
+  let h = `<h3>${title}</h3>`;
+  for(let i=shown;i>=0;i--) h += card(run[i], i, i===step);
+  if(step >= run.length) h = `<h3>${title}</h3><div class="done">Done in ${run.length} prompts. Feature complete, PR open.</div>` + h.replace(`<h3>${title}</h3>`,'');
+  el.innerHTML = h;
+}
+
+function meter(run, s, fare, note, ctx, bar){
+  const i = Math.min(s, run.length-1);
+  if(s < 0){ $(fare).textContent='$0.00'; $(note).textContent='Not started'; $(ctx).textContent='0k'; $(bar).style.width='0'; return; }
+  const t = run[i];
+  $(fare).textContent = money(t.cum);
+  $(note).textContent = s >= run.length ? `Finished after ${run.length} prompts` : `After prompt ${i+1} of ${run.length}`;
+  $(ctx).textContent = k(t.ctx);
+  $(bar).style.width = Math.min(100, t.ctx/CTX_SCALE*100) + '%';
+}
+
+function chart(){
+  const W=1000,H=220,L=48,Rp=16,T=14,Bt=30;
+  const top = Math.ceil(Math.max(A[A.length-1].cum, B[B.length-1].cum)*2)/2;
+  const x = i => L + (W-L-Rp) * (i/(MAX-1));
+  const y = v => T + (H-T-Bt) * (1 - v/top);
+  let g = '';
+  for(let v=0; v<=top+1e-9; v+=0.5){ g += `<line x1="${L}" x2="${W-Rp}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-8}" y="${y(v)+4}" text-anchor="end">$${v.toFixed(1)}</text>`; }
+  for(let i=0;i<MAX;i++) g += `<text x="${x(i)}" y="${H-8}" text-anchor="middle">${i+1}</text>`;
+  const line = (run, color) => {
+    const upto = Math.min(step, run.length-1);
+    const pts = run.map((t,i)=>`${x(i)},${y(t.cum)}`);
+    let s = `<polyline points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="2" stroke-dasharray="4 5" opacity=".35"/>`;
+    if(upto>=0){
+      s += `<polyline points="${pts.slice(0,upto+1).join(' ')}" fill="none" stroke="${color}" stroke-width="3.5" stroke-linejoin="round"/>`;
+      run.slice(0,upto+1).forEach((t,i)=> s += `<circle cx="${x(i)}" cy="${y(t.cum)}" r="${i===upto?6:3.5}" fill="${color}"/>`);
+    }
+    return s;
+  };
+  $('chart').innerHTML = g + line(A,'var(--a)') + line(B,'var(--b)');
+}
+
+function summary(){
+  const el = $('summary');
+  if(step < MAX){ el.classList.remove('show'); return; }
+  const a=S.A,b=S.B, cut = Math.round((1 - b.cost/a.cost)*100);
+  const row = (label, va, vb) => `<tr><th scope="row">${label}</th><td class="a num">${va}</td><td class="b num">${vb}</td></tr>`;
+  el.innerHTML = `<h2>The receipt</h2>
+    <table><thead><tr><th></th><th>Run A</th><th>Run B</th></tr></thead><tbody>
+    ${row('Cost, priced from the session logs', money(a.cost), money(b.cost))}
+    ${row('Cost reported by /cost', a.costReported, b.costReported)}
+    ${row('Wall time', a.time, b.time)}
+    ${row('Sessions', a.sessions, b.sessions)}
+    ${row('Prompts typed', a.prompts, b.prompts)}
+    ${row('Scope corrections', a.corrections, b.corrections)}
+    ${row('Peak context', a.peak, b.peak)}
+    ${row('Code changed (excluding Run B kit)', a.files, b.files)}
+    </tbody></table>
+    <p class="headline">${cut}% lower cost for the same feature set.</p>
+    <p class="foot">Honest costs on Run B's side: writing the spec took a person 10 to 15 minutes, and its three tweaks were styling preferences that weren't in the spec. Costs are estimated from each log's token counts, using per-model rates derived from the /cost output, so both runs are measured the same way.</p>`;
+  el.classList.add('show');
+}
+
+function dots(){
+  let h='';
+  for(let i=0;i<MAX;i++) h += `<button aria-label="Go to prompt ${i+1}" aria-current="${i===step}">${i+1}</button>`;
+  h += `<button aria-label="Show the summary" aria-current="${step===MAX}" style="width:auto;padding:0 10px">Total</button>`;
+  $('dots').innerHTML = h;
+  [...$('dots').children].forEach((b,i)=> b.onclick = ()=>go(i));
+}
+
+function render(){
+  meter(A, step, 'fareA','noteA','ctxA','barA');
+  meter(B, step, 'fareB','noteB','ctxB','barB');
+  renderLane($('laneA'), A, 'Run A prompts');
+  renderLane($('laneB'), B, 'Run B prompts');
+  document.documentElement.classList.toggle('at-summary', step>=MAX);
+  chart(); summary(); dots();
+  $('prev').disabled = step < 0;
+  $('next').disabled = step >= MAX;
+  $('stepLabel').textContent = step < 0 ? 'Press Next or the right arrow key to start' : step >= MAX ? 'Summary' : `Prompt ${step+1}`;
+}
+function go(s){ step = Math.max(-1, Math.min(MAX, s)); render(); if(step>=MAX && !document.documentElement.classList.contains('embed')) $('summary').scrollIntoView({behavior: matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth', block:'start'}); }
+function stop(){ clearInterval(timer); timer=null; $('play').textContent='Play'; }
+$('next').onclick = ()=>{ stop(); go(step+1); };
+$('prev').onclick = ()=>{ stop(); go(step-1); };
+$('restart').onclick = ()=>{ stop(); go(-1); };
+$('play').onclick = ()=>{
+  if(timer){ stop(); return; }
+  if(step>=MAX) go(-1);
+  $('play').textContent='Pause';
+  timer = setInterval(()=>{ if(step>=MAX){ stop(); return; } go(step+1); }, 2600);
+};
+document.addEventListener('keydown', e=>{
+  if(e.target.closest('button') && (e.key===' '||e.key==='Enter')) return;
+  if(e.key==='ArrowRight'||e.key===' '){ e.preventDefault(); stop(); go(step+1); }
+  if(e.key==='ArrowLeft'){ e.preventDefault(); stop(); go(step-1); }
+});
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Claude Code cheat sheet</title>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+@page{size:A4;margin:10mm}
+:root{--ink:#16202A;--muted:#5A6774;--line:#D5DBE1;--rule:#3150C4;--a:#B3303E;--b:#1F7366;--soft:#EEF1F4}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Schibsted Grotesk",system-ui,sans-serif;color:var(--ink);font-size:9.3pt;line-height:1.3}
+h1{font-size:19pt;margin:0;font-weight:800;letter-spacing:-.02em}
+.sub{color:var(--muted);margin:2px 0 10px}
+.idea{background:var(--soft);border-radius:8px;padding:8px 12px;margin-bottom:10px}
+.idea b{color:var(--a)}
+ol.rules{list-style:none;counter-reset:r;margin:0;padding:0}
+ol.rules li{counter-increment:r;display:grid;grid-template-columns:22px 1fr;gap:0 8px;padding:3px 0;border-bottom:1px solid var(--line)}
+ol.rules li::before{content:counter(r);font-weight:800;color:var(--rule);font-size:12pt;grid-row:span 2}
+ol.rules li b{font-size:10.8pt}
+ol.rules li span{color:var(--muted)}
+h2{font-size:11.5pt;margin:8px 0 3px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+table{border-collapse:collapse;width:100%;font-size:9.4pt}
+td{padding:3px 4px;border-bottom:1px solid var(--line);vertical-align:top}
+td:first-child{white-space:nowrap;width:1%}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:8.8pt;background:var(--soft);border-radius:4px;padding:0 3px}
+pre{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:8.4pt;background:var(--soft);border-radius:6px;padding:7px 9px;margin:0;white-space:pre-wrap}
+.flow{margin:0;padding-left:18px}.flow li{margin:2px 0;padding-left:2px}
+.foot{color:var(--muted);font-size:8.4pt;margin-top:8px}
+</style></head><body>
+<h1>Claude Code cheat sheet</h1>
+<p class="sub">Ten rules you can follow blindly. Same ticket, recorded twice: these rules cut the cost by 57%.</p>
+<div class="idea"><b>The meter:</b> every message re-sends the whole conversation, including every file read and every log pasted. Cost depends on context size, not message length. A “thanks” on a 130k session re-reads 130k.</div>
+<ol class="rules">
+<li><b>One task, one session</b><span>Task changes, run <code>/clear</code>. Side questions go in a separate chat.</span></li>
+<li><b>Plan before you build</b><span>Multi-file change: 10 to 20 line spec with out-of-scope, then plan mode (<code>Shift+Tab</code>), then approve.</span></li>
+<li><b>Pick the right model</b><span>Sonnet by default, Opus to plan or debug, <code>/model opusplan</code> for both. Switch only right after <code>/clear</code>.</span></li>
+<li><b>Point, don't make it search</b><span>Name files with <code>@path</code> and an existing pattern to copy.</span></li>
+<li><b>Keep CLAUDE.md short</b><span>Commands, hard rules, a link to the architecture map, guardrails. Sent on every message.</span></li>
+<li><b>Two strikes, then rewind</b><span>Corrected twice? <code>Esc Esc</code> or <code>/rewind</code>, then rewrite the prompt with what was missing.</span></li>
+<li><b>Facts, not feelings</b><span>“I did X, expected Y, got Z.” Collect issues and send them in one message.</span></li>
+<li><b>Trim what you paste</b><span>Failing test name and the error lines, not the whole log. “Report only failures.”</span></li>
+<li><b>Hand off, don't drag on</b><span>At a milestone: <code>/handoff</code>, <code>/clear</code>, “Read @.claude/handoff.md and continue.”</span></li>
+<li><b>No unrequested docs</b><span>“Do not create markdown files unless asked.” Turn off MCP servers you aren't using.</span></li>
+</ol>
+<div class="cols">
+<div>
+<h2>Commands</h2>
+<table>
+<tr><td><code>/context</code></td><td>See the meter</td></tr>
+<tr><td><code>/clear</code></td><td>Fresh session</td></tr>
+<tr><td><code>/compact &lt;keep…&gt;</code></td><td>Shrink, saying what to keep</td></tr>
+<tr><td><code>/rewind</code>, <code>Esc Esc</code></td><td>Undo a bad turn</td></tr>
+<tr><td><code>/model opusplan</code></td><td>Opus plans, Sonnet builds</td></tr>
+<tr><td><code>Shift+Tab</code></td><td>Plan mode</td></tr>
+<tr><td><code>/cost</code>, <code>/usage</code></td><td>Measure (run before <code>/clear</code>)</td></tr>
+<tr><td><code>/mcp</code></td><td>Turn servers off</td></tr>
+<tr><td><code>! cmd</code></td><td>Run it yourself</td></tr>
+</table>
+<h2>The workflow</h2>
+<ol class="flow" style="list-style:decimal">
+<li>Spec in <code>docs/specs/</code></li><li><code>/clear</code>, <code>/model opusplan</code>, plan mode</li><li>Review plan, approve (clear context)</li><li>Build, run checks, report failures only</li><li>Check yourself, send all fixes at once</li><li>Ship: commit, push, PR from the spec</li>
+</ol>
+</div>
+<div>
+<h2>Spec template</h2>
+<pre># Spec: &lt;name&gt; (&lt;ticket&gt;)
+Goal: &lt;what changes for the user&gt;
+- Data: &lt;schema, migrations&gt;
+- Logic: &lt;where; pattern to follow&gt;
+- API: &lt;endpoints, errors&gt;
+- UI: &lt;where; empty/error states&gt;
+- Tests: &lt;cases&gt;
+- Out of scope: &lt;what not to do&gt;
+- Done when: &lt;checks; PR opened&gt;</pre>
+<h2>Before you send a prompt</h2>
+<table>
+<tr><td>Purpose</td><td>What, and for whom?</td></tr>
+<tr><td>Context</td><td>Which files and patterns?</td></tr>
+<tr><td>Specifics</td><td>What would it have to guess?</td></tr>
+<tr><td>Out of scope</td><td>What must it not do?</td></tr>
+<tr><td>Done when</td><td>How will you both know?</td></tr>
+</table>
+</div>
+</div>
+<p class="foot">Full guide: guide/guide.pdf. Commands checked on Claude Code 2.1.287; run /help on your version.</p>
+</body></html>
